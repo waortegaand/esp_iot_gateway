@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := esp_iot_wategay
+PROJECT_NAME := esp_iot_gateway
 
 include $(IDF_PATH)/make/project.mk
 
