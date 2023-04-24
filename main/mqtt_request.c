@@ -41,7 +41,7 @@
   #define TOPIC_SUB_CONTROL	""
 */
 
-static const char *TAG = "MQTT_EXAMPLE";
+static const char *TAG = "__MQTT_REQUEST_C__ : ";
 static esp_mqtt_client_handle_t client = NULL;
 //static char count[20];
 static int32_t timesend = 5000;

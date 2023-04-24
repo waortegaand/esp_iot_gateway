@@ -84,3 +84,6 @@ dependencies.lock
 
 # Hidden include file
 main/include/iot_config.h
+
+# Certificate
+main/certs/iotplatform_azurewebsites_net_chain.pem
