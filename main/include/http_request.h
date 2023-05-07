@@ -11,6 +11,7 @@
 
 void http_get(void);
 void http_post(const char *send_data);
+int64_t get_time_http_msn(int16_t temp);
 /*
 void http_rest_with_url(void);
 void http_rest_with_hostname_path(void);

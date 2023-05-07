@@ -21,6 +21,7 @@
 #include "esp_http_client.h"
 
 #include "http_request.h"
+#include "mqtt_request.h"
 #include "iot_config.h"
 
 /* Root cert for howsmyssl.com, taken from howsmyssl_com_root_cert.pem
@@ -33,6 +34,8 @@
    To embed it in the app binary, the PEM file is named
    in the component.mk COMPONENT_EMBED_TXTFILES variable.
 */
+
+static int status_code = 0;
 
 /* Certificate is used in this project for https web page */
 extern const char azurewebsites_net_chain_pem_start[] asm("_binary_iotplatform_azurewebsites_net_chain_pem_start");
@@ -82,16 +85,17 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 }
 
 //void https_rest_with_url_post(void);
+esp_http_client_config_t config = {
+    .host = HOST_IOT_SERVER,
+    .path = "/",
+    .event_handler = _http_event_handler,
+    .cert_pem = azurewebsites_net_chain_pem_start,
+};
 
 void http_get(void){
-    esp_http_client_config_t config = {
-        .host = HOST_IOT_SERVER,
-        .path = PATH_GET_LAST_TEMP,
-        .event_handler = _http_event_handler,
-        .cert_pem = azurewebsites_net_chain_pem_start,
-    };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     // GET
+    esp_http_client_set_url(client, PATH_GET_LAST_TEMP);
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "HTTP GET Status = %d, content_length = %d",
@@ -105,23 +109,19 @@ void http_get(void){
 }
 
 void http_post(const char *send_data){
-    esp_http_client_config_t config = {
-        .host = HOST_IOT_SERVER,
-        .path = PATH_POST_TEMP,
-        .event_handler = _http_event_handler,
-        .cert_pem = azurewebsites_net_chain_pem_start,
-    };
     esp_http_client_handle_t client = esp_http_client_init(&config);
     // POST
     const char *post_data = send_data;
-    printf("\n--------------- POST Message: Send (%s)---------\n", post_data);
+    printf("\n--------------- POST Message: Send (%s)-----------\n", post_data);
+    esp_http_client_set_url(client, PATH_POST_TEMP);
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/json");
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK) {
+        status_code = esp_http_client_get_status_code(client);
         ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d",
-                esp_http_client_get_status_code(client),
+                status_code,
                 esp_http_client_get_content_length(client));
     } else {
         ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
@@ -129,6 +129,18 @@ void http_post(const char *send_data){
     esp_http_client_cleanup(client);
 }
 
+int64_t get_time_http_msn(int16_t temp){
+	static char msnSend[40];
+	sprintf(msnSend,"{\"tempTk\":\"%f\"}",(temp*0.25));
+	ESP_LOGI(TAG, "Peticion #: %f ... mensaje: %s", (temp*0.25), msnSend);
+	//vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);	
+
+	http_post(msnSend);
+	http_get();
+	int64_t time_tr = esp_timer_get_time();
+	status_code = 0;
+	return time_tr;
+}
 
 /*
  *  http_native_request() demonstrates use of low level APIs to connect to a server,
