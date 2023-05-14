@@ -89,7 +89,7 @@ esp_http_client_config_t config = {
     .host = HOST_IOT_SERVER,
     .path = "/",
     .event_handler = _http_event_handler,
-    .cert_pem = azurewebsites_net_chain_pem_start,
+    //.cert_pem = azurewebsites_net_chain_pem_start,
 };
 
 void http_get(void){
@@ -112,11 +112,11 @@ void http_post(const char *send_data){
     esp_http_client_handle_t client = esp_http_client_init(&config);
     // POST
     const char *post_data = send_data;
-    printf("\n--------------- POST Message: Send (%s)-----------\n", post_data);
     esp_http_client_set_url(client, PATH_POST_TEMP);
     esp_http_client_set_method(client, HTTP_METHOD_POST);
     esp_http_client_set_header(client, "Content-Type", "application/json");
     esp_http_client_set_post_field(client, post_data, strlen(post_data));
+    printf("\n--------------- POST Message: Send (%s)-----------\n", post_data);
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK) {
         status_code = esp_http_client_get_status_code(client);
@@ -136,9 +136,9 @@ int64_t get_time_http_msn(int16_t temp){
 	//vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);	
 
 	http_post(msnSend);
-	http_get();
+	//http_get();
 	int64_t time_tr = esp_timer_get_time();
-	status_code = 0;
+	//status_code = 0;
 	return time_tr;
 }
 

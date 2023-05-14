@@ -57,7 +57,7 @@ static esp_mqtt_client_handle_t client = NULL;
 
 	static int32_t  msncontrol = 0;
 void control_task(void * pvParameters){
-	//ESP_LOGI(TAG_CONTROL, "Suscrito Topic CONTROL, msg_id=%d", msg_id);
+	ESP_LOGI(TAG_CONTROL, "Task CONTROL . msncontrol: %d", msncontrol);
 	while(true){
 		msncontrol = get_num_control();
 		if(msncontrol == 0){
@@ -103,14 +103,14 @@ void sensor_task(void * pvParameters) {
 void pub_mqtt_task(void *pvParameter){
 	//vTaskDelay(2000 / portTICK_PERIOD_MS); // 2 s
 	int counter = 0;
-	while(counter<10){
+	while(counter<100){
 		counter++;
 		int64_t time_t0 = esp_timer_get_time();
 		int64_t time_t1 = get_time_mqtt_msn(temperature);
 		ESP_LOGI(TAG_MQTT, "Time = %lld", (time_t1-time_t0));
 		vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);	
         
-		if(counter >= 10){
+		if(counter >= 100){
 			ESP_LOGI(TAG_MQTT, "_____Suspend Task MQTT");
 			vTaskSuspend(NULL);
 			counter = 0;
@@ -125,14 +125,14 @@ void pub_mqtt_task(void *pvParameter){
 static void req_http_task(void *pvParameters)
 {
 	int counter = 0;
-	while(counter<5){
+	while(counter<100){
 		counter++;
 		int64_t time_t0 = esp_timer_get_time();
 		int64_t time_t1 = get_time_http_msn(temperature);
 		ESP_LOGI(TAG_HTTP, "Time = %lld", (time_t1-time_t0));
 		vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);	
         
-		if(counter >= 5){
+		if(counter >= 100){
 			ESP_LOGI(TAG_HTTP, "_____Suspend Task HTTP");
 			vTaskSuspend(NULL);
 			counter = 0;

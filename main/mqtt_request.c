@@ -94,11 +94,15 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         break;
     case MQTT_EVENT_PUBLISHED:
         ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+        if (strncmp(event->topic, TOPIC_PUB_TEMP, event->topic_len) == 0){
+            reqmsn = true;
+        }/**/
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
+        ESP_LOGI(TAG, "Mensajes - ALL EVENT: msg_id=%d", event->msg_id);
         if (strncmp(event->topic, TOPIC_SUB_TIME, event->topic_len) == 0)
         {
             timesend = str_to_int(event->data, event->data_len);
@@ -115,8 +119,9 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             ESP_LOGI(TAG, "Enable or Disable Control %d.", numcontrol);
         }else if (strncmp(event->topic, TOPIC_PUB_TEMP, event->topic_len) == 0)
         {
-            reqmsn = true;
-        }
+            ESP_LOGI(TAG, "Mensaje id: msg_id=%d", event->msg_id);
+            //reqmsn = true;
+        }/**/
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
@@ -138,6 +143,7 @@ int32_t get_num_control(void)
 {
     return numcontrol;
 }
+
 void set_num_control(void)
 {
     numcontrol = 100;
