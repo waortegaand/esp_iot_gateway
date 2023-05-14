@@ -8,12 +8,12 @@
 #include "nvs_flash.h"
 #include "esp_event.h"
 #include "esp_netif.h"
-//#include "protocol_examples_common.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "freertos/queue.h"
+#include "esp_timer.h"
 
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
@@ -48,16 +48,16 @@ static int16_t temperature = 0;
 //static int32_t timePeriodo = 1000;
 
 /* MQTT variables */
-static char sendTemp[20];
+//static char sendTemp[20];
 static esp_mqtt_client_handle_t client = NULL;
 /* HTTP variables */
-static char msnSend[40];
+//static char msnSend[40];
 
 /* Task: Selection Control - Enable-Disable mqtt and http request*/
 
 	static int32_t  msncontrol = 0;
 void control_task(void * pvParameters){
-	//ESP_LOGI(TAG_CONTROL, "Suscrito Topic CONTROL, msg_id=%d", msg_id);
+	ESP_LOGI(TAG_CONTROL, "Task CONTROL . msncontrol: %d", msncontrol);
 	while(true){
 		msncontrol = get_num_control();
 		if(msncontrol == 0){
@@ -103,15 +103,14 @@ void sensor_task(void * pvParameters) {
 void pub_mqtt_task(void *pvParameter){
 	//vTaskDelay(2000 / portTICK_PERIOD_MS); // 2 s
 	int counter = 0;
-	while(counter<10){
+	while(counter<100){
 		counter++;
-		sprintf(sendTemp,"%f",(temperature*0.25));
-		ESP_LOGI(TAG_MQTT, "Numero de publicacion: %d PUB", counter);
-		int msg_id = esp_mqtt_client_publish(client, TOPIC_PUB_TEMP, sendTemp, 0, 1, 0);
-		ESP_LOGI(TAG_MQTT, "sent publish successful, msg_id=%d, temp=%s", msg_id, sendTemp);
+		int64_t time_t0 = esp_timer_get_time();
+		int64_t time_t1 = get_time_mqtt_msn(temperature);
+		ESP_LOGI(TAG_MQTT, "Time = %lld", (time_t1-time_t0));
 		vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);	
         
-		if(counter >= 10){
+		if(counter >= 100){
 			ESP_LOGI(TAG_MQTT, "_____Suspend Task MQTT");
 			vTaskSuspend(NULL);
 			counter = 0;
@@ -126,21 +125,19 @@ void pub_mqtt_task(void *pvParameter){
 static void req_http_task(void *pvParameters)
 {
 	int counter = 0;
-	while(counter<5){
+	while(counter<100){
 		counter++;
-		sprintf(msnSend,"{\"tempTk\":\"%f\"}",(temperature*0.25));
-		ESP_LOGI(TAG_HTTP, "Peticion #: %f ... mensaje: %s", (temperature*0.25), msnSend);
+		int64_t time_t0 = esp_timer_get_time();
+		int64_t time_t1 = get_time_http_msn(temperature);
+		ESP_LOGI(TAG_HTTP, "Time = %lld", (time_t1-time_t0));
 		vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);	
-		
-		http_post(msnSend);
-		http_get();
         
-		if(counter >= 5){
+		if(counter >= 100){
 			ESP_LOGI(TAG_HTTP, "_____Suspend Task HTTP");
 			vTaskSuspend(NULL);
 			counter = 0;
 		}
-  }
+	}
 	ESP_LOGI(TAG_HTTP, "Finish HTTP example");
 	vTaskDelete(NULL);
 }
@@ -174,10 +171,9 @@ void app_main(void)
 	
 	client = mqtt_app_start();
 	
-	
-	xTaskCreate( &control_task, 	"control_task",			1024*4, NULL, 	6, &xHandle_control );
+	xTaskCreate( &control_task, 	"control_task",		1024*4, NULL, 	6, &xHandle_control );
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
-	xTaskCreate( &sensor_task, 		"sensor_task",			1024*4, spi, 		5, &xHandle_sensor );
-	xTaskCreate( &pub_mqtt_task, 	"mqtt_task", 				1024*4, client, 5, &xHandle_mqtt );
-	xTaskCreate( &req_http_task, 	"http_task", 				1024*8, NULL, 	5, &xHandle_http );
+	xTaskCreate( &sensor_task, 	"sensor_task",		1024*4, spi, 	5, &xHandle_sensor );
+	xTaskCreate( &pub_mqtt_task, 	"mqtt_task", 		1024*4, client, 5, &xHandle_mqtt );
+	xTaskCreate( &req_http_task, 	"http_task", 		1024*8, NULL, 	5, &xHandle_http );
 }
