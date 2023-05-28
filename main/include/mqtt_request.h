@@ -10,5 +10,6 @@ int32_t get_req_num();
 void set_num_control(void);
 int32_t get_num_control(void);
 int64_t get_time_mqtt_msn(int16_t temp);
+int32_t get_time_control(void);
 
 #endif /* __MQTT_REQUEST__ */

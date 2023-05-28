@@ -48,6 +48,7 @@ static esp_mqtt_client_handle_t client = NULL;
 static int32_t timesend = 5000;
 static int32_t numreq = 100;
 static int32_t numcontrol = 1;
+static int32_t timecontrol = 0;
 static bool reqmsn = false;
 
 static int32_t str_to_int(const char *str, int32_t len)
@@ -76,6 +77,8 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_SUB_TIME, 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_SUB_NREQ, 0);
+        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+        msg_id = esp_mqtt_client_subscribe(client, TOPIC_SUB_CONTROL_TIME, 0); /* Control time select */
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_SUB_CONTROL, 0); /* Control enable or disable request */
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
@@ -113,6 +116,11 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
             numreq = str_to_int(event->data, event->data_len);
             ESP_LOGI(TAG, "Nuevo valor de peticiones %d.", numreq);
         }
+        else if (strncmp(event->topic, TOPIC_SUB_CONTROL_TIME, event->topic_len) == 0)
+        {
+            timecontrol = str_to_int(event->data, event->data_len);
+            ESP_LOGI(TAG, "Select time for period %d.", timecontrol);
+        }
         else if (strncmp(event->topic, TOPIC_SUB_CONTROL, event->topic_len) == 0)
         {
             numcontrol = str_to_int(event->data, event->data_len);
@@ -142,6 +150,11 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 int32_t get_num_control(void)
 {
     return numcontrol;
+}
+
+int32_t get_time_control(void)
+{
+    return timecontrol;
 }
 
 void set_num_control(void)

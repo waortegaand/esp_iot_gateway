@@ -11,7 +11,10 @@
 
 void http_get(void);
 void http_post(const char *send_data);
+void http_post_series(void);
 int64_t get_time_http_msn(int16_t temp);
+void set_count_temp(int32_t counter, int16_t temp);
+int32_t get_time_period(void);
 /*
 void http_rest_with_url(void);
 void http_rest_with_hostname_path(void);
