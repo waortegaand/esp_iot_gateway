@@ -114,11 +114,12 @@ static void select_time_task(void * pvParameters){
     vTaskDelete(NULL);
 }
 
+
+static int32_t num_temp = 0;
 /* Task: SPI MAX6675 - Temperature Sensor Thermocouple K  */
 static void sensor_task(void * pvParameters) {
 	//vTaskDelay(2000 / portTICK_PERIOD_MS); // 2 s
 	spi_device_handle_t spi = (spi_device_handle_t) pvParameters;
-	static int32_t num_temp = 0;
 	while(true)
 	{
 		num_temp++;
@@ -192,16 +193,21 @@ static void http_get_task(void *pvParameters){
 
 static void http_serial_task(void *pvParameters){
     int counter = 0;
+	int32_t newpost = num_temp;
     while (counter<100){
-		counter++;
-        http_post_series();
-        vTaskDelay(timePeriod / portTICK_PERIOD_MS);
-		printf("###Finaliza una peticion POST con TEMP y POS\n");
-        if(counter >= 10){
-            ESP_LOGI(TAG_HTTP, "_____Suspend Task GET HTTP");
-            vTaskSuspend(NULL);
-            counter = 0;
-        }
+		if(num_temp > newpost){newpost = num_temp;}
+		if(num_temp == newpost){
+			counter++;
+            http_post_series();
+			//vTaskDelay(timePeriod / portTICK_PERIOD_MS);
+			printf("###Finaliza una peticion POST con TEMP y POS\n");
+			if(counter >= 10){
+                ESP_LOGI(TAG_HTTP, "_____Suspend Task GET HTTP");
+                vTaskSuspend(NULL);
+                counter = 0;
+            }
+			newpost++;
+		}
     }
     ESP_LOGI(TAG_HTTP, "Finish Serial HTTP example");
     vTaskDelete(NULL);
