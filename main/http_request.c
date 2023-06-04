@@ -57,10 +57,11 @@ static int32_t str_to_int(const char *str, int32_t len)
 {
     int32_t num = 0;
     int32_t i = 0;
-    while (str[i] && (str[i] >= '0' && str[i] <= '9') && (i < len))
+    for(i=0;i<len;i++)
     {
-        num = num * 10 + (str[i] - '0');
-        i++;
+        if(str[i] >= 48 && str[i] <= 57){
+            num = num*10 + (str[i] - '0');
+        }
     }
     return num;
 }
@@ -90,31 +91,6 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
             if (evt->user_data) {
                 memcpy(evt->user_data + output_len, evt->data, evt->data_len);
             }
-            //memcpy(evt->user_data + output_len, evt->data, evt->data_len);
-            //memcpy(output_buffer + output_len, evt->data, evt->data_len);
-            //printf("%.*s \n", evt->data_len, (char *)evt->data);
-            // If user_data buffer is configured, copy the response into the buffer
-            
-            //ESP_LOG_BUFFER_HEX(TAG_EVENT, output_buffer, strlen(output_buffer));
-            // Write out data
-            //timesend = str_to_int(evt->data, evt->data_len);
-            //printf("1 Valor timesend = %.*s \n", evt->data_len, (char*)evt->data);
-            //printf("2 Valor timesend = %s \n", evt->data);
-            //const char msnSend1[40] = {0};
-            //sprintf(msnSend1,"%.*s", evt->data_len, (char*)evt->data);
-            //printf("Nuevo Valor: %s \n",msnSend1);
-            /*
-            int32_t num = 0;
-            int32_t i = 0;
-            while (msnSend1[i] && (msnSend1[i] >= '0' && msnSend1[i] <= '9') && (i < strlen(msnSend1)))
-            {
-                num = num * 10 + (msnSend1[i] - '0');
-                i++;
-            }
-            timesend = num;
-            printf("Valor timesend = %d \n", timesend);
-            */
-            // If user_data buffer is configured, copy the response into the buffer
         }
 
         break;
@@ -286,7 +262,7 @@ void http_post_series(void){
 
 void http_get_time(void)
 {
-    char local_response_buffer[128] = {0};
+    char local_response_buffer[32] = {0};
     esp_http_client_config_t config = {
         .host = HOST_IOT_SERVER,
         .path = "/",
@@ -304,7 +280,9 @@ void http_get_time(void)
         ESP_LOGI(TAG_GET, "SERIAL GET TIME Status = %d, content_length = %d",
                  esp_http_client_get_status_code(client),
                  esp_http_client_get_content_length(client));
-        printf("%s\n",local_response_buffer);
+        //printf("%s\n",local_response_buffer);
+        timesend = str_to_int(local_response_buffer,strlen(local_response_buffer));
+        printf("TIMESEND %d \n", timesend);
     }
     else
     {
