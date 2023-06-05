@@ -222,6 +222,8 @@ void http_post_series(void){
 */
 
 void http_post_series(void){
+    int64_t time_t0, time_t1, time_tr;
+    time_t0 = esp_timer_get_time();
     esp_http_client_config_t config = {
         .host = HOST_IOT_SERVER,
         .path = "/",
@@ -258,6 +260,9 @@ void http_post_series(void){
     //ESP_LOGI(TAG_POST, "SERIAL POST Time Response = %lld", time_td);
     esp_http_client_cleanup(client);
     ESP_LOGE(TAG_POST, "SERIAL POST End Conection ");
+    time_t1 = esp_timer_get_time();
+    time_tr = time_t1 - time_t0;
+    ESP_LOGE(TAG_POST, "______Time : %lld", time_tr);
 }
 
 void http_get_time(void)
@@ -277,9 +282,9 @@ void http_get_time(void)
     esp_err_t err = esp_http_client_perform(client);
     if (err == ESP_OK)
     {
-        ESP_LOGI(TAG_GET, "SERIAL GET TIME Status = %d, content_length = %d",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        //ESP_LOGI(TAG_GET, "SERIAL GET TIME Status = %d, content_length = %d",
+        //         esp_http_client_get_status_code(client),
+        //         esp_http_client_get_content_length(client));
         //printf("%s\n",local_response_buffer);
         timesend = str_to_int(local_response_buffer,strlen(local_response_buffer));
         printf("TIMESEND %d \n", timesend);
@@ -359,7 +364,7 @@ int64_t get_time_http_msn(int16_t temp)
     return time_tr;
 }
 
-void set_count_temp(int32_t counter, int16_t temp)
+void set_http_data(int32_t counter, int16_t temp)
 {
     numTemp = counter;
     temperature = temp;

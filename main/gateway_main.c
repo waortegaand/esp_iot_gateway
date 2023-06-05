@@ -33,6 +33,7 @@
 // TAGs
 static const char *TAG_HTTP = "___HTTP_MAIN___";
 static const char *TAG_MQTT = "___MQTT_MAIN___";
+static const char *TAG_MQTT_S = "___MQTT_SERIES_PUB___";
 static const char *TAG_WIFI = "___WiFi_station___";
 static const char *TAG_CONTROL = "___CONTROL:___";
 static const char *TAG_IOT = "___IoT_MAIN___";
@@ -45,6 +46,7 @@ TaskHandle_t xHandle_mqtt = NULL;
 TaskHandle_t xHandle_http = NULL;
 TaskHandle_t xHandle_time = NULL;
 TaskHandle_t xHandle_serial_http = NULL;
+TaskHandle_t xHandle_serial_mqtt = NULL;
 TaskHandle_t xHandle_get_http = NULL;
 
 /* Sensor variables task */
@@ -61,7 +63,7 @@ static esp_mqtt_client_handle_t client = NULL;
 
 /* Task: Selection Control - Enable-Disable mqtt and http request*/
 
-	static int32_t  msncontrol = 0;
+static int32_t  msncontrol = 0;
 void control_task(void * pvParameters){
 	ESP_LOGI(TAG_CONTROL, "Task CONTROL . msncontrol: %d", msncontrol);
 	while(true){
@@ -70,6 +72,7 @@ void control_task(void * pvParameters){
 			vTaskSuspend(xHandle_mqtt);
 			vTaskSuspend(xHandle_http);
 			vTaskSuspend(xHandle_serial_http);
+			vTaskSuspend(xHandle_serial_mqtt);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: vTaskSuspend(xHandle_.....) ALL \n");
 		}else if(msncontrol == 5){
@@ -80,6 +83,10 @@ void control_task(void * pvParameters){
 			vTaskResume(xHandle_http);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: HTTP - vTaskResume(xHandle_http)\n");
+		}else if(msncontrol == 105){
+			vTaskResume(xHandle_serial_mqtt);
+			set_num_control();
+			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: HTTP - vTaskResume(xHandle_serial_mqtt)\n");
 		}else if(msncontrol == 110){
 			vTaskResume(xHandle_serial_http);
 			set_num_control();
@@ -88,6 +95,7 @@ void control_task(void * pvParameters){
 			vTaskDelete(xHandle_mqtt);
 			vTaskDelete(xHandle_http);
 			vTaskDelete(xHandle_serial_http);
+			vTaskDelete(xHandle_serial_mqtt);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____TASK DELETE: vTaskDelete(NULL)\n");
 		}
@@ -114,6 +122,23 @@ static void select_time_task(void * pvParameters){
     vTaskDelete(NULL);
 }
 
+static void http_get_task(void *pvParameters){
+    //int counter = 0;
+    while(true)
+    {
+        http_get_time();
+		/*
+        if(counter >= 10){
+            ESP_LOGI(TAG_HTTP, "_____Suspend Task GET HTTP");
+            vTaskSuspend(NULL);
+            counter = 0;
+        }
+		*/
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+    }
+    ESP_LOGI(TAG_HTTP, "Finish Serial HTTP GET example");
+    vTaskDelete(NULL);
+}
 
 static int32_t num_temp = 0;
 /* Task: SPI MAX6675 - Temperature Sensor Thermocouple K  */
@@ -124,10 +149,11 @@ static void sensor_task(void * pvParameters) {
 	{
 		num_temp++;
 		temperature = read_temp(spi);
-		printf("SPI Temp=%f\n", temperature * 0.25);
+		printf("SPI Temp=%f, Period = %d \n", temperature * 0.25, timePeriod);
 		vTaskDelay(timePeriod / portTICK_PERIOD_MS);
 		//vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);
-		set_count_temp(num_temp, temperature);
+		set_http_data(num_temp, temperature);
+		set_mqtt_data(num_temp,temperature);
 	}
 	vTaskDelete(NULL);
 }
@@ -175,21 +201,6 @@ static void req_http_task(void *pvParameters)
 	vTaskDelete(NULL);
 }
 
-static void http_get_task(void *pvParameters){
-    int counter = 0;
-    while (counter<100)
-    {
-        http_get_time();
-        if(counter >= 10){
-            ESP_LOGI(TAG_HTTP, "_____Suspend Task GET HTTP");
-            vTaskSuspend(NULL);
-            counter = 0;
-        }
-        vTaskDelay(2500 / portTICK_PERIOD_MS);
-    }
-    ESP_LOGI(TAG_HTTP, "Finish Serial HTTP GET example");
-    vTaskDelete(NULL);
-}
 
 static void http_serial_task(void *pvParameters){
     int counter = 0;
@@ -203,6 +214,27 @@ static void http_serial_task(void *pvParameters){
 			printf("###Finaliza una peticion POST con TEMP y POS\n");
 			if(counter >= 10){
                 ESP_LOGI(TAG_HTTP, "_____Suspend Task GET HTTP");
+                vTaskSuspend(NULL);
+                counter = 0;
+            }
+			newpost++;
+		}
+    }
+    ESP_LOGI(TAG_HTTP, "Finish Serial HTTP example");
+    vTaskDelete(NULL);
+}
+
+static void mqtt_serial_task(void *pvParameters){
+    int counter = 0;
+	int32_t newpost = num_temp;
+    while (counter<100){
+		if(num_temp > newpost){newpost = num_temp;}
+		if(num_temp == newpost){
+			counter++;
+            mqtt_pub_series();
+			printf("###  Finaliza una publicacion MQTT \n");
+			if(counter >= 10){
+                ESP_LOGI(TAG_MQTT_S, "_____Suspend Task PUB HTTP");
                 vTaskSuspend(NULL);
                 counter = 0;
             }
@@ -243,13 +275,13 @@ void app_main(void)
 	
 	xTaskCreate( &control_task, 	"control_task",		1024*4, NULL, 	6, &xHandle_control );
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
-	xTaskCreate( &sensor_task, 	"sensor_task",		1024*4, spi, 	5, &xHandle_sensor );
+	xTaskCreate( &sensor_task, 	"sensor_task",			1024*4, spi, 	5, &xHandle_sensor );
 	xTaskCreate( &pub_mqtt_task, 	"mqtt_task", 		1024*4, client, 5, &xHandle_mqtt );
 	xTaskCreate( &req_http_task, 	"http_task", 		1024*8, NULL, 	5, &xHandle_http );
 	xTaskCreate( &select_time_task, "time_task", 		1024*2, NULL, 	6, &xHandle_time );
 	xTaskCreate( &http_serial_task, "serial_http_task", 	1024*8, NULL, 	5, &xHandle_serial_http );
-	
-	
-	
+	xTaskCreate( &mqtt_serial_task, "serial_mqtt_task", 	1024*8, NULL, 	5, &xHandle_serial_mqtt );
+		
 	xTaskCreate( &http_get_task, 	"http_get_task", 	1024*8, NULL, 	5, &xHandle_get_http );
+	
 }

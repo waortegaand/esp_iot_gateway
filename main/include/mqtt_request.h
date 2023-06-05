@@ -7,9 +7,11 @@
 esp_mqtt_client_handle_t mqtt_app_start(void);
 int32_t get_time_ms();
 int32_t get_req_num();
-void set_num_control(void);
 int32_t get_num_control(void);
 int64_t get_time_mqtt_msn(int16_t temp);
 int32_t get_time_control(void);
+void set_num_control(void);
+void mqtt_pub_series(void);
+void set_mqtt_data(int32_t counter, int16_t temp);
 
 #endif /* __MQTT_REQUEST__ */
