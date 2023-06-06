@@ -265,8 +265,10 @@ void http_post_series(void){
     ESP_LOGE(TAG_POST, "______Time : %lld", time_tr);
 }
 
-void http_get_time(void)
+int32_t http_get_time(void)
 {
+    int64_t time_t0, time_t1, time_tr;
+    time_t0 = esp_timer_get_time();
     char local_response_buffer[32] = {0};
     esp_http_client_config_t config = {
         .host = HOST_IOT_SERVER,
@@ -295,6 +297,47 @@ void http_get_time(void)
     }
     //vTaskDelay(1000 / portTICK_PERIOD_MS);
     esp_http_client_cleanup(client);
+    time_t1 = esp_timer_get_time();
+    time_tr = time_t1 - time_t0;
+    ESP_LOGE(TAG_GET, "______Time : %lld", time_tr);
+    return timesend;
+}
+
+void http_set_time(const char *send_data){
+    int64_t time_t0, time_t1, time_tr;
+    time_t0 = esp_timer_get_time();
+    esp_http_client_config_t config = {
+        .host = HOST_IOT_SERVER,
+        .path = "/",
+        .event_handler = _http_event_handler,
+        .cert_pem = azurewebsites_net_chain_pem_start,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    //
+    // POST
+    const char *post_data = send_data;
+    esp_http_client_set_url(client, PATH_SET_SERIAL);
+    esp_http_client_set_method(client, HTTP_METHOD_POST);
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_http_client_set_post_field(client, post_data, strlen(post_data));
+    printf("\n--------------- NEW TIME SEND POST Message: Send (%s)-----------\n", post_data);
+    esp_err_t err = esp_http_client_perform(client);
+    if (err == ESP_OK)
+    {
+        status_code = esp_http_client_get_status_code(client);
+        ESP_LOGI(TAG_POST, "NEW SERIAL POST Status = %d, content_length = %d",
+                 status_code,
+                 esp_http_client_get_content_length(client));
+    }
+    else
+    {
+        ESP_LOGE(TAG_POST, "SERIAL POST request failed: %s", esp_err_to_name(err));
+    }
+    esp_http_client_cleanup(client);
+    ESP_LOGE(TAG_POST, "SERIAL POST End Conection ");
+    time_t1 = esp_timer_get_time();
+    time_tr = time_t1 - time_t0;
+    ESP_LOGE(TAG_POST, "______Time : %lld", time_tr);
 }
 /**/
 

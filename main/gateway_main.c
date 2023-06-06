@@ -71,8 +71,8 @@ void control_task(void * pvParameters){
 		if(msncontrol == 0){
 			vTaskSuspend(xHandle_mqtt);
 			vTaskSuspend(xHandle_http);
-			vTaskSuspend(xHandle_serial_http);
-			vTaskSuspend(xHandle_serial_mqtt);
+			//vTaskSuspend(xHandle_serial_http);
+			//vTaskSuspend(xHandle_serial_mqtt);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: vTaskSuspend(xHandle_.....) ALL \n");
 		}else if(msncontrol == 5){
@@ -84,18 +84,18 @@ void control_task(void * pvParameters){
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: HTTP - vTaskResume(xHandle_http)\n");
 		}else if(msncontrol == 105){
-			vTaskResume(xHandle_serial_mqtt);
+			//vTaskResume(xHandle_serial_mqtt);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: HTTP - vTaskResume(xHandle_serial_mqtt)\n");
 		}else if(msncontrol == 110){
-			vTaskResume(xHandle_serial_http);
+			//vTaskResume(xHandle_serial_http);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____CONTROL: HTTP - vTaskResume(xHandle_serial_http)\n");
 		}else if(msncontrol == 200){
 			vTaskDelete(xHandle_mqtt);
 			vTaskDelete(xHandle_http);
-			vTaskDelete(xHandle_serial_http);
-			vTaskDelete(xHandle_serial_mqtt);
+			//vTaskDelete(xHandle_serial_http);
+			//vTaskDelete(xHandle_serial_mqtt);
 			set_num_control();
 			ESP_LOGI(TAG_CONTROL, "\n_____TASK DELETE: vTaskDelete(NULL)\n");
 		}
@@ -123,18 +123,19 @@ static void select_time_task(void * pvParameters){
 }
 
 static void http_get_task(void *pvParameters){
-    //int counter = 0;
+    int32_t time_select = http_get_time();
+    int32_t temp = time_select;
     while(true)
     {
-        http_get_time();
-		/*
-        if(counter >= 10){
-            ESP_LOGI(TAG_HTTP, "_____Suspend Task GET HTTP");
-            vTaskSuspend(NULL);
-            counter = 0;
+        if(time_select != temp){
+            ESP_LOGI(TAG_HTTP, "_____Send POST HTTP");
+            static char msnSend[32];
+            sprintf(msnSend, "{\"period\":%d}", (time_select+1));
+            http_set_time(msnSend);
+            temp = time_select+1;
         }
-		*/
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        time_select = http_get_time();
+        //vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
     ESP_LOGI(TAG_HTTP, "Finish Serial HTTP GET example");
     vTaskDelete(NULL);
@@ -201,7 +202,7 @@ static void req_http_task(void *pvParameters)
 	vTaskDelete(NULL);
 }
 
-
+/*
 static void http_serial_task(void *pvParameters){
     int counter = 0;
 	int32_t newpost = num_temp;
@@ -244,6 +245,7 @@ static void mqtt_serial_task(void *pvParameters){
     ESP_LOGI(TAG_HTTP, "Finish Serial HTTP example");
     vTaskDelete(NULL);
 }
+*/
 
 void app_main(void)
 {
@@ -279,8 +281,8 @@ void app_main(void)
 	xTaskCreate( &pub_mqtt_task, 	"mqtt_task", 		1024*4, client, 5, &xHandle_mqtt );
 	xTaskCreate( &req_http_task, 	"http_task", 		1024*8, NULL, 	5, &xHandle_http );
 	xTaskCreate( &select_time_task, "time_task", 		1024*2, NULL, 	6, &xHandle_time );
-	xTaskCreate( &http_serial_task, "serial_http_task", 	1024*8, NULL, 	5, &xHandle_serial_http );
-	xTaskCreate( &mqtt_serial_task, "serial_mqtt_task", 	1024*8, NULL, 	5, &xHandle_serial_mqtt );
+	//xTaskCreate( &http_serial_task, "serial_http_task", 	1024*8, NULL, 	5, &xHandle_serial_http );
+	//xTaskCreate( &mqtt_serial_task, "serial_mqtt_task", 	1024*8, NULL, 	5, &xHandle_serial_mqtt );
 		
 	xTaskCreate( &http_get_task, 	"http_get_task", 	1024*8, NULL, 	5, &xHandle_get_http );
 	
