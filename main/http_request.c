@@ -399,7 +399,6 @@ int64_t get_time_http_msn(int16_t temp)
     sprintf(msnSend, "{\"tempTk\":\"%f\"}", (temp * 0.25));
     ESP_LOGI(TAG, "Peticion #: %f ... mensaje: %s", (temp * 0.25), msnSend);
     //vTaskDelay(get_time_ms() / portTICK_PERIOD_MS);
-
     http_post(msnSend);
     //http_get();
     int64_t time_tr = esp_timer_get_time();

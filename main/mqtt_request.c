@@ -48,6 +48,7 @@ static const char *TAG_PUB = "__MQTT_REQUEST_C_SERIAL_PUB__ : ";
 static esp_mqtt_client_handle_t client = NULL;
 //static char count[20];
 static int32_t timesend = 5000;
+static int32_t getperiod = 5000;
 static int32_t numreq = 100;
 static int32_t numcontrol = 1;
 static int32_t timecontrol = 0;
@@ -55,7 +56,9 @@ static int32_t numTemp = 0;
 static int16_t temperature = 0;
 static bool reqmsn = false;
 static bool seriemsn = false;
+static bool settime = false;
 
+/*
 static int32_t str_to_int(const char *str, int32_t len)
 {
     int32_t num = 0;
@@ -64,6 +67,19 @@ static int32_t str_to_int(const char *str, int32_t len)
     {
         num = num * 10 + (str[i] - '0');
         i++;
+    }
+    return num;
+}
+*/
+static int32_t str_to_int(const char *str, int32_t len)
+{
+    int32_t num = 0;
+    int32_t i = 0;
+    for(i=0;i<len;i++)
+    {
+        if(str[i] >= 48 && str[i] <= 57){
+            num = num*10 + (str[i] - '0');
+        }
     }
     return num;
 }
@@ -79,6 +95,8 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_PUB_TEMP, 1);
         ESP_LOGI(TAG, "TOPIC_PUB_TEMP subscribe successful, msg_id=%d", msg_id);
+        msg_id = esp_mqtt_client_subscribe(client, TOPIC_PUB_TIME, 1);
+        ESP_LOGI(TAG, "TOPIC_PUB_TIME subscribe successful, msg_id=%d", msg_id);
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_SUB_TIME, 0);
         ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
         msg_id = esp_mqtt_client_subscribe(client, TOPIC_SUB_NREQ, 0);
@@ -109,7 +127,10 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         }/**/
         else if (strncmp(event->topic, TOPIC_PUB_SERIES, event->topic_len) == 0){
             seriemsn = true;
-        }/**/
+        }
+        else if (strncmp(event->topic, TOPIC_PUB_TIME, event->topic_len) == 0){
+            settime = true;
+        }/**//**/
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
@@ -138,6 +159,11 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         }else if (strncmp(event->topic, TOPIC_PUB_TEMP, event->topic_len) == 0)
         {
             ESP_LOGI(TAG, "Mensaje id: msg_id=%d", event->msg_id);
+            //reqmsn = true;
+        }else if (strncmp(event->topic, TOPIC_PUB_TIME, event->topic_len) == 0)
+        {
+            getperiod = str_to_int(event->data, event->data_len);
+            ESP_LOGI(TAG, "Nuevo valor de tiempo %d", getperiod);
             //reqmsn = true;
         }else if (strncmp(event->topic, TOPIC_PUB_SERIES, event->topic_len) == 0)
         {
@@ -181,6 +207,11 @@ int32_t get_time_ms()
     return timesend;
 }
 
+int32_t mqtt_get_time()
+{
+    return getperiod;
+}
+
 int32_t get_req_num()
 {
     return numreq;
@@ -201,6 +232,22 @@ int64_t get_time_mqtt_msn(int16_t temp)
             return time_tr;
         }
     }
+}
+
+void mqtt_set_time(const char *send_data){
+    int64_t time_t0, time_t1, time_tr;
+    time_t0 = esp_timer_get_time();
+    int msg_id = esp_mqtt_client_publish(client, TOPIC_PUB_TIME, send_data, 0, 1, 0);
+    ESP_LOGI(TAG_PUB, "publish successful, msg_id=%d, temp=%s", msg_id, send_data);
+    while(true){
+        if(settime==true){
+            time_t1 = esp_timer_get_time();
+            settime = false;
+            break;
+        }
+    }
+    time_tr = time_t1 - time_t0;
+    ESP_LOGE(TAG_PUB, "______Time : %lld", time_tr);
 }
 
 void mqtt_pub_series(void){
